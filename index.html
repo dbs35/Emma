@@ -389,73 +389,56 @@ const STADIUM_LON = -116.3056;
 
 function buildSections(level) {
   const sections = [];
-  let sectionDefs;
+
+  // Sections are evenly distributed around the bowl.
+  // Each section faces toward the court center, so facing = (angle + 180) % 360.
+  // This gives smooth transitions at corners instead of abrupt jumps.
+  //
+  // 400-level: 24 sections (15° apart), starting at 30° (NNE)
+  //   East sideline:  401-406 (angles 30°-105°)
+  //   South baseline: 407-413 (angles 120°-210°)
+  //   West sideline:  414-419 (angles 225°-300°)
+  //   North baseline: 420-424 (angles 315°-15°)
+  //
+  // Verified against shadedseats.com:
+  //   Sunniest: 401-405, 420-424  (east + north)  ✓
+  //   Shade:    408-416, 504-506  (south + west)   ✓
 
   if (level === 400) {
-    // 24 sections around the bowl
-    sectionDefs = [
-      // East side (NE to SE) - spectators face WEST (~270°)
-      { id: '401', angle: 35,  facing: 270 },
-      { id: '402', angle: 50,  facing: 270 },
-      { id: '403', angle: 65,  facing: 270 },
-      { id: '404', angle: 80,  facing: 270 },
-      { id: '405', angle: 95,  facing: 270 },
-      { id: '406', angle: 110, facing: 270 },
-      // SE corner
-      { id: '407', angle: 130, facing: 315 },
-      // South side (SE to SW) - spectators face NORTH (~0°)
-      { id: '408', angle: 150, facing: 0 },
-      { id: '409', angle: 165, facing: 0 },
-      { id: '410', angle: 180, facing: 0 },
-      { id: '411', angle: 195, facing: 0 },
-      { id: '412', angle: 210, facing: 0 },
-      // SW corner
-      { id: '413', angle: 230, facing: 45 },
-      // West side (SW to NW) - spectators face EAST (~90°)
-      { id: '414', angle: 250, facing: 90 },
-      { id: '415', angle: 265, facing: 90 },
-      { id: '416', angle: 280, facing: 90 },
-      { id: '417', angle: 295, facing: 90 },
-      { id: '418', angle: 310, facing: 90 },
-      { id: '419', angle: 325, facing: 90 },
-      // NW corner
-      { id: '420', angle: 340, facing: 135 },
-      // North side (NW to NE) - spectators face SOUTH (~180°)
-      { id: '421', angle: 350, facing: 180 },
-      { id: '422', angle: 5,   facing: 180 },
-      { id: '423', angle: 15,  facing: 180 },
-      { id: '424', angle: 25,  facing: 180 },
-    ];
+    const count = 24;
+    const startId = 401;
+    const startAngle = 30; // section 401 at NNE
+    for (let i = 0; i < count; i++) {
+      const angle = (startAngle + i * (360 / count)) % 360;
+      const facing = (angle + 180) % 360;
+      sections.push({
+        id: String(startId + i),
+        angleDeg: angle,
+        facingAzimuth: facing,
+        level: 400,
+      });
+    }
   } else {
-    // 500-level: 12 wider sections
-    sectionDefs = [
-      // East side
-      { id: '501', angle: 42,  facing: 270 },
-      { id: '502', angle: 67,  facing: 270 },
-      { id: '503', angle: 92,  facing: 270 },
-      // South side
-      { id: '504', angle: 135, facing: 0 },
-      { id: '505', angle: 165, facing: 0 },
-      { id: '506', angle: 195, facing: 0 },
-      // West side
-      { id: '507', angle: 228, facing: 90 },
-      { id: '508', angle: 258, facing: 90 },
-      { id: '509', angle: 288, facing: 90 },
-      // North side
-      { id: '510', angle: 318, facing: 180 },
-      { id: '511', angle: 348, facing: 180 },
-      { id: '512', angle: 18,  facing: 180 },
-    ];
+    // 500-level: 12 wider sections (30° apart)
+    //   East:  501-503 (angles 45°-105°)
+    //   South: 504-506 (angles 135°-195°)
+    //   West:  507-509 (angles 225°-285°)
+    //   North: 510-512 (angles 315°-15°)
+    const count = 12;
+    const startId = 501;
+    const startAngle = 45;
+    for (let i = 0; i < count; i++) {
+      const angle = (startAngle + i * (360 / count)) % 360;
+      const facing = (angle + 180) % 360;
+      sections.push({
+        id: String(startId + i),
+        angleDeg: angle,
+        facingAzimuth: facing,
+        level: 500,
+      });
+    }
   }
 
-  for (const def of sectionDefs) {
-    sections.push({
-      id: def.id,
-      angleDeg: def.angle,
-      facingAzimuth: def.facing,
-      level: level,
-    });
-  }
   return sections;
 }
 
@@ -835,15 +818,16 @@ function updateSectionInfo(sec) {
 
 function getSide(facingAz) {
   // facingAz is direction toward court. Section is on the OPPOSITE side.
-  // If you face west (270), you're on the east side
-  if (facingAz === 270) return 'East sideline';
-  if (facingAz === 90) return 'West sideline (umpire side)';
-  if (facingAz === 0) return 'South baseline';
-  if (facingAz === 180) return 'North baseline';
-  if (facingAz === 315) return 'SE corner';
-  if (facingAz === 45) return 'SW corner';
-  if (facingAz === 135) return 'NW corner';
-  if (facingAz === 225) return 'NE corner';
+  // Normalize the "section bearing" (where the section sits) = facing + 180
+  const secBearing = (facingAz + 180) % 360;
+  if (secBearing >= 340 || secBearing < 20) return 'North baseline';
+  if (secBearing >= 20 && secBearing < 70) return 'NE corner';
+  if (secBearing >= 70 && secBearing < 110) return 'East sideline';
+  if (secBearing >= 110 && secBearing < 160) return 'SE corner';
+  if (secBearing >= 160 && secBearing < 200) return 'South baseline';
+  if (secBearing >= 200 && secBearing < 250) return 'SW corner';
+  if (secBearing >= 250 && secBearing < 290) return 'West sideline (umpire side)';
+  if (secBearing >= 290 && secBearing < 340) return 'NW corner';
   return '';
 }
 
