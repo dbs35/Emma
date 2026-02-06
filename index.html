@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Indian Wells Stadium 1 - Sun Exposure Tool</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+  }
+  h1 {
+    font-size: 1.6rem;
+    margin-bottom: 4px;
+    color: #fff;
+    text-align: center;
+  }
+  .subtitle {
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+  .controls {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 16px;
+    background: #16213e;
+    padding: 16px 24px;
+    border-radius: 12px;
+    border: 1px solid #2a3a5c;
+  }
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .control-group label {
+    font-size: 0.75rem;
+    color: #8899bb;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .control-group input[type="date"] {
+    background: #0f3460;
+    border: 1px solid #2a3a5c;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.95rem;
+  }
+  .time-slider-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  input[type="range"] {
+    width: 260px;
+    accent-color: #e94560;
+  }
+  .time-display {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #e94560;
+    min-width: 75px;
+    text-align: center;
+  }
+  .sun-info {
+    font-size: 0.85rem;
+    color: #aaa;
+    text-align: center;
+    margin-bottom: 12px;
+    min-height: 20px;
+  }
+  .sun-info strong { color: #e94560; }
+  .main-layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .stadium-container {
+    position: relative;
+    width: 620px;
+    height: 620px;
+  }
+  #stadiumCanvas {
+    border-radius: 12px;
+    background: #16213e;
+    border: 1px solid #2a3a5c;
+  }
+  .sidebar {
+    background: #16213e;
+    border-radius: 12px;
+    border: 1px solid #2a3a5c;
+    padding: 20px;
+    width: 260px;
+  }
+  .sidebar h3 {
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+    color: #fff;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+  }
+  .legend-swatch {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .section-info {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #2a3a5c;
+  }
+  .section-info h3 { margin-bottom: 8px; }
+  .section-info .detail {
+    font-size: 0.82rem;
+    color: #aaa;
+    margin-bottom: 4px;
+  }
+  .section-info .detail strong { color: #ddd; }
+  .recommendation {
+    margin-top: 16px;
+    padding: 12px;
+    background: #0f3460;
+    border-radius: 8px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+  .recommendation h4 {
+    color: #e94560;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
+  }
+  .play-btn {
+    background: #e94560;
+    border: none;
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .play-btn:hover { background: #c73850; }
+  .compass-label {
+    position: absolute;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #556;
+    pointer-events: none;
+  }
+  .level-toggle {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 6px;
+  }
+  .level-btn {
+    background: #0f3460;
+    border: 1px solid #2a3a5c;
+    color: #8899bb;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+  .level-btn.active {
+    background: #e94560;
+    border-color: #e94560;
+    color: #fff;
+  }
+</style>
+</head>
+<body>
+<h1>Indian Wells Stadium 1 &mdash; Sun Exposure Map</h1>
+<p class="subtitle">BNP Paribas Open &middot; March 5&ndash;22, 2026 &middot; Upper Bowl Seating</p>
+
+<div class="controls">
+  <div class="control-group">
+    <label>Date</label>
+    <input type="date" id="datePicker" min="2026-03-05" max="2026-03-22" value="2026-03-14">
+  </div>
+  <div class="control-group">
+    <label>Time (Pacific)</label>
+    <div class="time-slider-container">
+      <input type="range" id="timeSlider" min="360" max="1260" step="5" value="840">
+      <span class="time-display" id="timeDisplay">2:00 PM</span>
+    </div>
+  </div>
+  <div class="control-group">
+    <label>&nbsp;</label>
+    <button class="play-btn" id="playBtn">&#9654; Animate</button>
+  </div>
+</div>
+
+<div class="sun-info" id="sunInfo"></div>
+
+<div class="main-layout">
+  <div class="stadium-container">
+    <canvas id="stadiumCanvas" width="620" height="620"></canvas>
+  </div>
+  <div class="sidebar">
+    <div>
+      <h3>Legend</h3>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:#d32f2f;"></div>
+        <span>Sun in your eyes</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:#f57c00;"></div>
+        <span>Sun in front, high angle</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:#fbc02d;"></div>
+        <span>Sun to your side</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:#388e3c;"></div>
+        <span>Sun behind you (comfortable)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch" style="background:#1565c0;"></div>
+        <span>Sun below horizon</span>
+      </div>
+    </div>
+    <div class="section-info" id="sectionInfo">
+      <h3>Section Details</h3>
+      <p class="detail" style="color:#667;">Hover over a section for details</p>
+    </div>
+    <div class="recommendation" id="recommendation">
+      <h4>Best Sections Right Now</h4>
+      <div id="recText"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Solar Position Calculator
+// Based on NOAA solar calculation spreadsheet algorithms
+// ============================================================
+function calcSolarPosition(date, hours, lat, lon) {
+  // hours is decimal hours in LOCAL time (Pacific, UTC-7 for PDT in March)
+  // March 2026: daylight saving starts March 8, so before that UTC-8, after UTC-7
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const year = date.getFullYear();
+
+  // Determine timezone offset (PST = -8, PDT = -7)
+  // DST starts 2nd Sunday of March 2026 = March 8
+  let tzOffset = -8;
+  if (month > 3 || (month === 3 && day >= 8)) {
+    tzOffset = -7;
+  }
+
+  // Convert local time to UTC
+  const utcHours = hours - tzOffset;
+
+  // Julian Day Number
+  const a = Math.floor((14 - month) / 12);
+  const y = year + 4800 - a;
+  const m = month + 12 * a - 3;
+  const jdn = day + Math.floor((153 * m + 2) / 5) + 365 * y +
+              Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+  const jd = jdn + (utcHours - 12) / 24;
+
+  // Julian Century
+  const T = (jd - 2451545.0) / 36525.0;
+
+  // Geometric Mean Longitude of Sun (degrees)
+  let L0 = 280.46646 + T * (36000.76983 + 0.0003032 * T);
+  L0 = L0 % 360;
+
+  // Geometric Mean Anomaly of Sun (degrees)
+  let M = 357.52911 + T * (35999.05029 - 0.0001537 * T);
+  M = M % 360;
+  const Mrad = M * Math.PI / 180;
+
+  // Equation of Center
+  const C = (1.914602 - T * (0.004817 + 0.000014 * T)) * Math.sin(Mrad) +
+            (0.019993 - 0.000101 * T) * Math.sin(2 * Mrad) +
+            0.000289 * Math.sin(3 * Mrad);
+
+  // Sun True Longitude
+  const sunLon = L0 + C;
+
+  // Apparent Longitude
+  const omega = 125.04 - 1934.136 * T;
+  const lambda = sunLon - 0.00569 - 0.00478 * Math.sin(omega * Math.PI / 180);
+  const lambdaRad = lambda * Math.PI / 180;
+
+  // Mean Obliquity of Ecliptic
+  const eps0 = 23 + (26 + (21.448 - T * (46.815 + T * (0.00059 - T * 0.001813))) / 60) / 60;
+  const epsCorr = eps0 + 0.00256 * Math.cos(omega * Math.PI / 180);
+  const epsRad = epsCorr * Math.PI / 180;
+
+  // Declination
+  const sinDec = Math.sin(epsRad) * Math.sin(lambdaRad);
+  const dec = Math.asin(sinDec);
+
+  // Equation of Time (minutes)
+  const tanHalfEps = Math.tan(epsRad / 2);
+  const y2 = tanHalfEps * tanHalfEps;
+  const L0rad = L0 * Math.PI / 180;
+  const ecc = 0.016708634 - T * (0.000042037 + 0.0000001267 * T);
+  const EoT = 4 * (180 / Math.PI) * (
+    y2 * Math.sin(2 * L0rad) -
+    2 * ecc * Math.sin(Mrad) +
+    4 * ecc * y2 * Math.sin(Mrad) * Math.cos(2 * L0rad) -
+    0.5 * y2 * y2 * Math.sin(4 * L0rad) -
+    1.25 * ecc * ecc * Math.sin(2 * Mrad)
+  );
+
+  // Solar Noon (minutes from midnight, local time)
+  const solarNoon = 720 - 4 * lon - EoT + tzOffset * (-60);
+
+  // Hour Angle
+  const trueSolarTime = hours * 60 + EoT + 4 * lon + tzOffset * 60;
+  let ha = (trueSolarTime / 4) - 180;
+  const haRad = ha * Math.PI / 180;
+
+  // Solar Elevation
+  const latRad = lat * Math.PI / 180;
+  const sinElev = Math.sin(latRad) * Math.sin(dec) + Math.cos(latRad) * Math.cos(dec) * Math.cos(haRad);
+  const elevation = Math.asin(sinElev) * 180 / Math.PI;
+
+  // Solar Azimuth
+  let azimuth;
+  if (ha > 0) {
+    azimuth = (Math.acos(
+      (Math.sin(latRad) * sinElev - Math.sin(dec)) /
+      (Math.cos(latRad) * Math.cos(Math.asin(sinElev)))
+    ) * 180 / Math.PI + 180) % 360;
+  } else {
+    azimuth = (540 - Math.acos(
+      (Math.sin(latRad) * sinElev - Math.sin(dec)) /
+      (Math.cos(latRad) * Math.cos(Math.asin(sinElev)))
+    ) * 180 / Math.PI) % 360;
+  }
+
+  return { elevation, azimuth };
+}
+
+// ============================================================
+// Stadium Model - Indian Wells Stadium 1
+// ============================================================
+// Location: 33.7241°N, 116.3056°W
+// Court orientation: N-S (baselines at N and S ends)
+// Umpire: West side
+const STADIUM_LAT = 33.7241;
+const STADIUM_LON = -116.3056;
+
+// Upper bowl sections arranged around the stadium
+// Based on research: 400-level sections 401-424, 500-level sections 501-512
+// Court runs N-S. Section numbering goes clockwise from the NE corner.
+//
+// Layout (clockwise from NE):
+//   East sideline:  401-406  (facing west toward court)
+//   SE corner:      407
+//   South baseline: 408-412  (facing north toward court)
+//   SW corner:      413
+//   West sideline:  414-419  (facing east toward court)
+//   NW corner:      420
+//   North baseline: 421-424  (facing south toward court)
+//
+// We define each section by its angular center position (0° = North, clockwise)
+// and the direction the spectator faces (toward court center)
+
+function buildSections(level) {
+  const sections = [];
+  let sectionDefs;
+
+  if (level === 400) {
+    // 24 sections around the bowl
+    sectionDefs = [
+      // East side (NE to SE) - spectators face WEST (~270°)
+      { id: '401', angle: 35,  facing: 270 },
+      { id: '402', angle: 50,  facing: 270 },
+      { id: '403', angle: 65,  facing: 270 },
+      { id: '404', angle: 80,  facing: 270 },
+      { id: '405', angle: 95,  facing: 270 },
+      { id: '406', angle: 110, facing: 270 },
+      // SE corner
+      { id: '407', angle: 130, facing: 315 },
+      // South side (SE to SW) - spectators face NORTH (~0°)
+      { id: '408', angle: 150, facing: 0 },
+      { id: '409', angle: 165, facing: 0 },
+      { id: '410', angle: 180, facing: 0 },
+      { id: '411', angle: 195, facing: 0 },
+      { id: '412', angle: 210, facing: 0 },
+      // SW corner
+      { id: '413', angle: 230, facing: 45 },
+      // West side (SW to NW) - spectators face EAST (~90°)
+      { id: '414', angle: 250, facing: 90 },
+      { id: '415', angle: 265, facing: 90 },
+      { id: '416', angle: 280, facing: 90 },
+      { id: '417', angle: 295, facing: 90 },
+      { id: '418', angle: 310, facing: 90 },
+      { id: '419', angle: 325, facing: 90 },
+      // NW corner
+      { id: '420', angle: 340, facing: 135 },
+      // North side (NW to NE) - spectators face SOUTH (~180°)
+      { id: '421', angle: 350, facing: 180 },
+      { id: '422', angle: 5,   facing: 180 },
+      { id: '423', angle: 15,  facing: 180 },
+      { id: '424', angle: 25,  facing: 180 },
+    ];
+  } else {
+    // 500-level: 12 wider sections
+    sectionDefs = [
+      // East side
+      { id: '501', angle: 42,  facing: 270 },
+      { id: '502', angle: 67,  facing: 270 },
+      { id: '503', angle: 92,  facing: 270 },
+      // South side
+      { id: '504', angle: 135, facing: 0 },
+      { id: '505', angle: 165, facing: 0 },
+      { id: '506', angle: 195, facing: 0 },
+      // West side
+      { id: '507', angle: 228, facing: 90 },
+      { id: '508', angle: 258, facing: 90 },
+      { id: '509', angle: 288, facing: 90 },
+      // North side
+      { id: '510', angle: 318, facing: 180 },
+      { id: '511', angle: 348, facing: 180 },
+      { id: '512', angle: 18,  facing: 180 },
+    ];
+  }
+
+  for (const def of sectionDefs) {
+    sections.push({
+      id: def.id,
+      angleDeg: def.angle,
+      facingAzimuth: def.facing,
+      level: level,
+    });
+  }
+  return sections;
+}
+
+// Rows in upper bowl: A through T (front to back)
+const UPPER_ROWS = 'ABCDEFGHIJKLMNOPQRST'.split('');
+
+// ============================================================
+// Sun Comfort Calculation
+// ============================================================
+function calcComfort(facingAzimuth, sunAzimuth, sunElevation) {
+  if (sunElevation < 0) {
+    return { level: 'below_horizon', score: 0, label: 'Sun below horizon' };
+  }
+
+  // Angular difference between where you're facing and where the sun is
+  let diff = sunAzimuth - facingAzimuth;
+  // Normalize to -180..180
+  while (diff > 180) diff -= 360;
+  while (diff < -180) diff += 360;
+  const absDiff = Math.abs(diff);
+
+  // Sun directly in your eyes: small angular difference AND low-to-moderate elevation
+  // At higher elevations, the sun is more overhead and less "in your eyes"
+  // Account for the fact that you're looking slightly downward at the court (~10-15° below horizontal)
+  // So the sun's effective "in-eyes" zone depends on elevation
+
+  if (absDiff < 40) {
+    // Sun is in front of you
+    if (sunElevation < 45) {
+      // Low sun, right in your eyes - worst case
+      return { level: 'in_eyes', score: 3, label: 'Sun directly in your eyes' };
+    } else {
+      // Sun is high but still in front
+      return { level: 'high_front', score: 2, label: 'Sun in front but high overhead' };
+    }
+  } else if (absDiff < 70) {
+    // Sun is to your front-side
+    if (sunElevation < 35) {
+      return { level: 'side_low', score: 2, label: 'Low sun to your side - some glare' };
+    }
+    return { level: 'side', score: 1, label: 'Sun to your side' };
+  } else {
+    // Sun is behind you or far to the side
+    return { level: 'behind', score: 0, label: 'Sun behind you - comfortable' };
+  }
+}
+
+function getColor(comfort) {
+  switch (comfort.level) {
+    case 'in_eyes':      return '#d32f2f';
+    case 'high_front':   return '#f57c00';
+    case 'side_low':     return '#f57c00';
+    case 'side':         return '#fbc02d';
+    case 'behind':       return '#388e3c';
+    case 'below_horizon': return '#1565c0';
+    default:             return '#555';
+  }
+}
+
+// ============================================================
+// Rendering
+// ============================================================
+const canvas = document.getElementById('stadiumCanvas');
+const ctx = canvas.getContext('2d');
+
+const CX = 310; // center X
+const CY = 310; // center Y
+// Stadium is slightly oval - wider E-W (along sidelines) since court is N-S
+const RX_INNER = 130; // inner radius X (court area)
+const RY_INNER = 165; // inner radius Y
+const RX_OUTER_400 = 220;
+const RY_OUTER_400 = 255;
+const RX_OUTER_500 = 270;
+const RY_OUTER_500 = 295;
+
+let currentLevel = 400;
+let hoveredSection = null;
+let sections400 = buildSections(400);
+let sections500 = buildSections(500);
+let animating = false;
+let animInterval = null;
+
+function getCurrentSections() {
+  return currentLevel === 400 ? sections400 : sections500;
+}
+
+function angleToXY(angleDeg, rx, ry) {
+  const rad = (angleDeg - 90) * Math.PI / 180; // -90 so 0° = top (North)
+  return { x: CX + rx * Math.cos(rad), y: CY + ry * Math.sin(rad) };
+}
+
+function getSectionPath(section) {
+  const secs = getCurrentSections();
+  const idx = secs.indexOf(section);
+  const count = secs.length;
+
+  // Find angular extent of this section
+  const prevSec = secs[(idx - 1 + count) % count];
+  const nextSec = secs[(idx + 1) % count];
+
+  let startAngle = section.angleDeg - angleBetween(prevSec.angleDeg, section.angleDeg) / 2;
+  let endAngle = section.angleDeg + angleBetween(section.angleDeg, nextSec.angleDeg) / 2;
+
+  const rxIn = currentLevel === 400 ? RX_INNER + 55 : RX_OUTER_400 + 8;
+  const ryIn = currentLevel === 400 ? RY_INNER + 55 : RY_OUTER_400 + 8;
+  const rxOut = currentLevel === 400 ? RX_OUTER_400 : RX_OUTER_500;
+  const ryOut = currentLevel === 400 ? RY_OUTER_400 : RY_OUTER_500;
+
+  // Build path as a set of points
+  const points = [];
+  const steps = 12;
+  for (let i = 0; i <= steps; i++) {
+    const a = startAngle + (endAngle - startAngle) * i / steps;
+    points.push(angleToXY(a, rxOut, ryOut));
+  }
+  for (let i = steps; i >= 0; i--) {
+    const a = startAngle + (endAngle - startAngle) * i / steps;
+    points.push(angleToXY(a, rxIn, ryIn));
+  }
+  return points;
+}
+
+function angleBetween(a1, a2) {
+  let diff = a2 - a1;
+  while (diff < 0) diff += 360;
+  while (diff > 360) diff -= 360;
+  if (diff > 180) diff = 360 - diff;
+  return diff;
+}
+
+function drawStadium(sunAz, sunElev) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // Background
+  ctx.fillStyle = '#16213e';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  // Draw court
+  drawCourt();
+
+  // Draw sections
+  const secs = getCurrentSections();
+  const comforts = [];
+
+  for (const sec of secs) {
+    const comfort = calcComfort(sec.facingAzimuth, sunAz, sunElev);
+    comforts.push({ section: sec, comfort });
+    const color = getColor(comfort);
+    const points = getSectionPath(sec);
+
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+      ctx.lineTo(points[i].x, points[i].y);
+    }
+    ctx.closePath();
+
+    ctx.fillStyle = color;
+    ctx.globalAlpha = hoveredSection === sec ? 1.0 : 0.8;
+    ctx.fill();
+    ctx.globalAlpha = 1.0;
+
+    ctx.strokeStyle = hoveredSection === sec ? '#fff' : '#16213e';
+    ctx.lineWidth = hoveredSection === sec ? 2.5 : 1.5;
+    ctx.stroke();
+
+    // Section label
+    const labelPos = angleToXY(sec.angleDeg,
+      currentLevel === 400 ? (RX_INNER + 55 + RX_OUTER_400) / 2 : (RX_OUTER_400 + 8 + RX_OUTER_500) / 2,
+      currentLevel === 400 ? (RY_INNER + 55 + RY_OUTER_400) / 2 : (RY_OUTER_400 + 8 + RY_OUTER_500) / 2
+    );
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(sec.id, labelPos.x, labelPos.y);
+  }
+
+  // Draw compass directions
+  drawCompass();
+
+  // Draw sun indicator
+  if (sunElev > 0) {
+    drawSunIndicator(sunAz);
+  }
+
+  // Draw level indicators
+  drawLevelLabel();
+
+  // Update recommendation
+  updateRecommendation(comforts);
+}
+
+function drawCourt() {
+  // Court outline (green rectangle oriented N-S)
+  const courtW = 50;
+  const courtH = 80;
+  ctx.fillStyle = '#2e7d32';
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 1.5;
+
+  // Court is oriented N-S so the long dimension is vertical
+  const cx = CX;
+  const cy = CY;
+
+  ctx.beginPath();
+  ctx.rect(cx - courtW / 2, cy - courtH / 2, courtW, courtH);
+  ctx.fill();
+  ctx.stroke();
+
+  // Service lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 1;
+  // Center line
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - courtH / 2);
+  ctx.lineTo(cx, cy + courtH / 2);
+  ctx.stroke();
+  // Service line top
+  ctx.beginPath();
+  ctx.moveTo(cx - courtW / 2 + 5, cy - courtH / 4);
+  ctx.lineTo(cx + courtW / 2 - 5, cy - courtH / 4);
+  ctx.stroke();
+  // Service line bottom
+  ctx.beginPath();
+  ctx.moveTo(cx - courtW / 2 + 5, cy + courtH / 4);
+  ctx.lineTo(cx + courtW / 2 - 5, cy + courtH / 4);
+  ctx.stroke();
+  // Net
+  ctx.strokeStyle = '#aaa';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(cx - courtW / 2 - 8, cy);
+  ctx.lineTo(cx + courtW / 2 + 8, cy);
+  ctx.stroke();
+
+  // Label
+  ctx.fillStyle = 'rgba(255,255,255,0.3)';
+  ctx.font = '10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('COURT', cx, cy + 3);
+
+  // Umpire indicator (West side)
+  ctx.fillStyle = 'rgba(255,255,255,0.35)';
+  ctx.font = '8px sans-serif';
+  ctx.fillText('Umpire', cx - courtW / 2 - 22, cy + 3);
+}
+
+function drawCompass() {
+  const labels = [
+    { text: 'N', angle: 0 },
+    { text: 'E', angle: 90 },
+    { text: 'S', angle: 180 },
+    { text: 'W', angle: 270 },
+  ];
+  const r = currentLevel === 400 ? RX_OUTER_400 + 22 : RX_OUTER_500 + 22;
+  const ry2 = currentLevel === 400 ? RY_OUTER_400 + 22 : RY_OUTER_500 + 22;
+
+  for (const l of labels) {
+    const pos = angleToXY(l.angle, r, ry2);
+    ctx.fillStyle = '#556';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(l.text, pos.x, pos.y);
+  }
+}
+
+function drawSunIndicator(sunAz) {
+  const r = currentLevel === 400 ? RX_OUTER_400 + 42 : RX_OUTER_500 + 38;
+  const ry2 = currentLevel === 400 ? RY_OUTER_400 + 42 : RY_OUTER_500 + 38;
+  const pos = angleToXY(sunAz, r, ry2);
+
+  // Sun glow
+  const grad = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, 18);
+  grad.addColorStop(0, 'rgba(255, 200, 50, 0.6)');
+  grad.addColorStop(1, 'rgba(255, 200, 50, 0)');
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, 18, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sun circle
+  ctx.fillStyle = '#FFD700';
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, 8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#FF8C00';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Rays
+  ctx.strokeStyle = '#FFD700';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 8; i++) {
+    const a = (i * Math.PI * 2) / 8;
+    ctx.beginPath();
+    ctx.moveTo(pos.x + 10 * Math.cos(a), pos.y + 10 * Math.sin(a));
+    ctx.lineTo(pos.x + 15 * Math.cos(a), pos.y + 15 * Math.sin(a));
+    ctx.stroke();
+  }
+}
+
+function drawLevelLabel() {
+  ctx.fillStyle = 'rgba(255,255,255,0.15)';
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'center';
+  const label = currentLevel === 400 ? '400 Level (Upper Bowl)' : '500 Level (Top Deck)';
+  ctx.fillText(label, CX, CY + 130);
+}
+
+// ============================================================
+// Interaction
+// ============================================================
+function getMouseSection(mx, my) {
+  const secs = getCurrentSections();
+  for (const sec of secs) {
+    const points = getSectionPath(sec);
+    if (isPointInPolygon(mx, my, points)) {
+      return sec;
+    }
+  }
+  return null;
+}
+
+function isPointInPolygon(x, y, polygon) {
+  let inside = false;
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].x, yi = polygon[i].y;
+    const xj = polygon[j].x, yj = polygon[j].y;
+    const intersect = ((yi > y) !== (yj > y)) &&
+      (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+canvas.addEventListener('mousemove', function(e) {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const sec = getMouseSection(mx, my);
+  if (sec !== hoveredSection) {
+    hoveredSection = sec;
+    updateDisplay();
+    updateSectionInfo(sec);
+  }
+});
+
+canvas.addEventListener('mouseleave', function() {
+  hoveredSection = null;
+  updateDisplay();
+  updateSectionInfo(null);
+});
+
+function updateSectionInfo(sec) {
+  const el = document.getElementById('sectionInfo');
+  if (!sec) {
+    el.innerHTML = '<h3>Section Details</h3><p class="detail" style="color:#667;">Hover over a section for details</p>';
+    return;
+  }
+  const sun = getCurrentSun();
+  const comfort = calcComfort(sec.facingAzimuth, sun.azimuth, sun.elevation);
+  const facingDir = azToCompass(sec.facingAzimuth);
+  const side = getSide(sec.facingAzimuth);
+
+  el.innerHTML = `
+    <h3>Section ${sec.id}</h3>
+    <p class="detail"><strong>Level:</strong> ${sec.level}</p>
+    <p class="detail"><strong>Side:</strong> ${side}</p>
+    <p class="detail"><strong>Facing:</strong> ${facingDir} (toward court)</p>
+    <p class="detail"><strong>Rows:</strong> A&ndash;T (front to back)</p>
+    <p class="detail" style="margin-top:8px;"><strong>Sun status:</strong></p>
+    <p class="detail" style="color:${getColor(comfort)}; font-weight:600;">${comfort.label}</p>
+  `;
+}
+
+function getSide(facingAz) {
+  // facingAz is direction toward court. Section is on the OPPOSITE side.
+  // If you face west (270), you're on the east side
+  if (facingAz === 270) return 'East sideline';
+  if (facingAz === 90) return 'West sideline (umpire side)';
+  if (facingAz === 0) return 'South baseline';
+  if (facingAz === 180) return 'North baseline';
+  if (facingAz === 315) return 'SE corner';
+  if (facingAz === 45) return 'SW corner';
+  if (facingAz === 135) return 'NW corner';
+  if (facingAz === 225) return 'NE corner';
+  return '';
+}
+
+function azToCompass(az) {
+  const dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE',
+                'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+  const idx = Math.round(az / 22.5) % 16;
+  return dirs[idx];
+}
+
+function updateRecommendation(comforts) {
+  const el = document.getElementById('recText');
+  const sun = getCurrentSun();
+
+  if (sun.elevation < 0) {
+    el.innerHTML = '<span style="color:#aaa;">The sun is below the horizon. All sections are comfortable.</span>';
+    return;
+  }
+
+  const best = comforts.filter(c => c.comfort.level === 'behind');
+  const worst = comforts.filter(c => c.comfort.level === 'in_eyes');
+
+  let html = '';
+  if (best.length > 0) {
+    html += '<span style="color:#388e3c;">Best: </span>';
+    html += best.map(c => c.section.id).join(', ');
+  }
+  if (worst.length > 0) {
+    html += '<br><span style="color:#d32f2f;">Avoid: </span>';
+    html += worst.map(c => c.section.id).join(', ');
+  }
+  if (!html) {
+    html = '<span style="color:#aaa;">No sections have direct sun in eyes right now.</span>';
+  }
+  el.innerHTML = html;
+}
+
+// ============================================================
+// Controls
+// ============================================================
+const datePicker = document.getElementById('datePicker');
+const timeSlider = document.getElementById('timeSlider');
+const timeDisplay = document.getElementById('timeDisplay');
+const sunInfoEl = document.getElementById('sunInfo');
+const playBtn = document.getElementById('playBtn');
+
+function getCurrentSun() {
+  const dateVal = datePicker.value;
+  const parts = dateVal.split('-');
+  const date = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+  const minutes = parseInt(timeSlider.value);
+  const hours = minutes / 60;
+  return calcSolarPosition(date, hours, STADIUM_LAT, STADIUM_LON);
+}
+
+function formatTime(minutes) {
+  let h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  if (h > 12) h -= 12;
+  if (h === 0) h = 12;
+  return `${h}:${m.toString().padStart(2, '0')} ${ampm}`;
+}
+
+function updateDisplay() {
+  const sun = getCurrentSun();
+  const minutes = parseInt(timeSlider.value);
+  timeDisplay.textContent = formatTime(minutes);
+
+  if (sun.elevation > 0) {
+    sunInfoEl.innerHTML = `Sun: azimuth <strong>${sun.azimuth.toFixed(1)}°</strong> (${azToCompass(sun.azimuth)}), elevation <strong>${sun.elevation.toFixed(1)}°</strong>`;
+  } else {
+    sunInfoEl.innerHTML = `Sun is <strong>below the horizon</strong>`;
+  }
+
+  drawStadium(sun.azimuth, sun.elevation);
+}
+
+datePicker.addEventListener('input', updateDisplay);
+timeSlider.addEventListener('input', updateDisplay);
+
+// Level toggle buttons
+document.addEventListener('DOMContentLoaded', function() {
+  // Add level toggle to controls
+  const controls = document.querySelector('.controls');
+  const levelDiv = document.createElement('div');
+  levelDiv.className = 'control-group';
+  levelDiv.innerHTML = `
+    <label>Level</label>
+    <div class="level-toggle">
+      <button class="level-btn active" data-level="400">400</button>
+      <button class="level-btn" data-level="500">500</button>
+    </div>
+  `;
+  controls.appendChild(levelDiv);
+
+  document.querySelectorAll('.level-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.level-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      currentLevel = parseInt(this.dataset.level);
+      hoveredSection = null;
+      updateDisplay();
+    });
+  });
+});
+
+// Animation
+playBtn.addEventListener('click', function() {
+  if (animating) {
+    clearInterval(animInterval);
+    animating = false;
+    playBtn.innerHTML = '&#9654; Animate';
+    return;
+  }
+
+  animating = true;
+  playBtn.innerHTML = '&#9724; Stop';
+
+  // Start from 6am if current time is late
+  let t = parseInt(timeSlider.value);
+  if (t >= 1250) t = 360;
+
+  animInterval = setInterval(function() {
+    t += 5;
+    if (t > 1260) {
+      t = 360;
+    }
+    timeSlider.value = t;
+    updateDisplay();
+  }, 100);
+});
+
+// Initial render
+updateDisplay();
+</script>
+</body>
+</html>
