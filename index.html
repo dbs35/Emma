@@ -332,10 +332,11 @@ function calcSolarPosition(date, hours, lat, lon) {
   );
 
   // Solar Noon (minutes from midnight, local time)
-  const solarNoon = 720 - 4 * lon - EoT + tzOffset * (-60);
+  const solarNoon = 720 - EoT - 4 * lon + tzOffset * 60;
 
   // Hour Angle
-  const trueSolarTime = hours * 60 + EoT + 4 * lon + tzOffset * 60;
+  // NOAA formula: TST = localTime(min) + EoT + 4*longitude - 60*timezone
+  const trueSolarTime = hours * 60 + EoT + 4 * lon - tzOffset * 60;
   let ha = (trueSolarTime / 4) - 180;
   const haRad = ha * Math.PI / 180;
 
